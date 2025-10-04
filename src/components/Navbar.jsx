@@ -45,7 +45,7 @@ const Navbar = () => {
               filter: 'drop-shadow(0 0 6px rgba(168, 230, 206, 0.6))'
             }}
           >
-            Stats
+            Dashboard
           </Link>
         </div>
       </div>
