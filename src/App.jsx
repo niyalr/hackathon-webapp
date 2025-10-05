@@ -14,9 +14,9 @@ function App() {
           muted
           playsInline
           className="w-full h-full object-cover"
-          src="/web page video.mp4"
+          src="/web%20page%20video.mp4"
         >
-          <source src="/web page video.mp4" type="video/mp4" />
+          <source src="/web%20page%20video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50"></div>
       </div>

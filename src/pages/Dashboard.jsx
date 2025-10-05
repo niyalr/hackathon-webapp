@@ -232,54 +232,44 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  const runPrediction = async () => {
+  const runPrediction = () => {
     setIsLoading(true);
     setPredictionResult(null);
 
-    try {
-      let response;
+    setTimeout(() => {
+      let result;
+
       if (csvFile) {
-        // Send CSV file to backend
-        const formData = new FormData();
-        formData.append('file', csvFile);
-        response = await fetch('http://10.24.111.21:5000/predict', {
-          method: 'POST',
-          body: formData,
-        });
+        // Mock CSV result
+        result = {
+          status: 'success',
+          message: 'Bulk analysis completed successfully',
+          details: 'Processed 150 exoplanet candidates from CSV file',
+          processed: 150,
+          exoplanetsFound: 23
+        };
       } else {
-        // Send manual inputs to backend
-        const data = manualInputs.slice(0, 14).map(val => parseFloat(val) || 0);
-        response = await fetch('http://10.24.111.21:5000/predict', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data }),
-        });
+        // Mock manual input result based on sum > 100
+        const values = manualInputs.map(val => parseFloat(val) || 0);
+        const sum = values.reduce((acc, val) => acc + val, 0);
+        const isPositive = sum > 100;
+        result = {
+          status: isPositive ? 'positive' : 'negative',
+          message: isPositive
+            ? 'High probability of exoplanet detection'
+            : 'Low probability of exoplanet detection',
+          details: isPositive
+            ? 'The analyzed parameters suggest strong exoplanet characteristics'
+            : 'The analyzed parameters do not indicate clear exoplanet signals',
+          processed: 1,
+          exoplanetsFound: isPositive ? 1 : 0
+        };
       }
 
-      if (!response.ok) {
-        throw new Error('Failed to get prediction from backend');
-      }
-
-      const result = await response.json();
       setPredictionResult(result);
-      setShowModal(true);
-    } catch (error) {
-      console.error('Prediction error:', error);
-      // Fallback to mock result if backend fails
-      const mockResult = {
-        status: 'error',
-        message: 'Prediction failed',
-        details: 'Unable to connect to backend. Please try again.',
-        processed: 0,
-        exoplanetsFound: 0
-      };
-      setPredictionResult(mockResult);
-      setShowModal(true);
-    } finally {
       setIsLoading(false);
-    }
+      setShowModal(true);
+    }, 2000);
   };
 
   return (
