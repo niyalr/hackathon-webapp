@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { TrendingUp, Upload, X, FileText } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { TrendingUp, Upload, X, FileText, ArrowLeft, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Feature names for the 20 inputs
 const FEATURE_NAMES = [
@@ -10,15 +11,21 @@ const FEATURE_NAMES = [
 ];
 
 // Feature Input Component
-const FeatureInput = ({ name, value, onChange, placeholder }) => (
+const FeatureInput = ({ name, value, onChange, placeholder, onEnter, ref }) => (
   <div className="space-y-1">
     <label className="text-sm font-medium text-white/90 block">
       {name.replace(/_/g, ' ').toUpperCase()}
     </label>
     <input
+      ref={ref}
       type="number"
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          onEnter();
+        }
+      }}
       placeholder={placeholder || `Enter ${name.replace(/_/g, ' ')}`}
       className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent backdrop-blur-sm"
     />
@@ -113,7 +120,7 @@ const CsvUploader = ({ onFileSelect, selectedFile, onClear }) => {
 };
 
 // Result Modal Component
-const ResultModal = ({ predictionResult, onClose }) => {
+const ResultModal = ({ predictionResult, onClose, onDownloadCsv }) => {
   if (!predictionResult) return null;
 
   const bgClass =
@@ -153,14 +160,19 @@ const ResultModal = ({ predictionResult, onClose }) => {
           <p className="text-white/70 text-center">{predictionResult.details}</p>
           <div className="flex items-center justify-center gap-4">
             <span className="text-white/80 text-center">
-              Confidence: <span className="font-bold text-2xl">{predictionResult.confidence}%</span>
+              Processed: <span className="font-bold text-2xl">{predictionResult.processed}</span>
             </span>
-            {predictionResult.candidatesFound && (
-              <span className="text-white/80 text-center">
-                Candidates: <span className="font-bold text-2xl">{predictionResult.candidatesFound}</span>
-              </span>
-            )}
+            <span className="text-white/80 text-center">
+              Exoplanets Found: <span className="font-bold text-2xl">{predictionResult.exoplanetsFound}</span>
+            </span>
           </div>
+          <button
+            onClick={onDownloadCsv}
+            className="mt-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Download CSV
+          </button>
         </div>
       </div>
     </div>
@@ -168,6 +180,8 @@ const ResultModal = ({ predictionResult, onClose }) => {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const inputRefs = useRef([]);
   const [manualInputs, setManualInputs] = useState(Array(20).fill(''));
   const [csvFile, setCsvFile] = useState(null);
   const [predictionResult, setPredictionResult] = useState(null);
@@ -193,65 +207,110 @@ export default function Dashboard() {
 
   const canPredict = csvFile || manualInputs.some(input => input.trim() !== '');
 
-  const runPrediction = () => {
+  const downloadCsv = () => {
+    if (!predictionResult) return;
+
+    const headers = ['Status', 'Message', 'Details', 'Processed', 'Exoplanets Found'];
+    const values = [
+      predictionResult.status,
+      predictionResult.message,
+      predictionResult.details,
+      predictionResult.processed,
+      predictionResult.exoplanetsFound
+    ];
+
+    const csvContent = [headers.join(','), values.join(',')].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'prediction_result.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const runPrediction = async () => {
     setIsLoading(true);
     setPredictionResult(null);
 
-    setTimeout(() => {
-      let result;
-
+    try {
+      let response;
       if (csvFile) {
-        // Mock CSV result
-        result = {
-          status: 'success',
-          message: 'Bulk analysis completed successfully',
-          details: 'Processed 150 exoplanet candidates from CSV file',
-          confidence: 94.2,
-          candidatesFound: 23
-        };
+        // Send CSV file to backend
+        const formData = new FormData();
+        formData.append('file', csvFile);
+        response = await fetch('http://10.24.111.21:5000/predict', {
+          method: 'POST',
+          body: formData,
+        });
       } else {
-        // Mock manual input result based on sum > 100
-        const values = manualInputs.map(val => parseFloat(val) || 0);
-        const sum = values.reduce((acc, val) => acc + val, 0);
-        const isPositive = sum > 100;
-        result = {
-          status: isPositive ? 'positive' : 'negative',
-          message: isPositive
-            ? 'High probability of exoplanet detection'
-            : 'Low probability of exoplanet detection',
-          details: isPositive
-            ? 'The analyzed parameters suggest strong exoplanet characteristics'
-            : 'The analyzed parameters do not indicate clear exoplanet signals',
-          confidence: Math.min(100, Math.floor(sum)) // confidence based on sum capped at 100
-        };
+        // Send manual inputs to backend
+        const data = manualInputs.slice(0, 14).map(val => parseFloat(val) || 0);
+        response = await fetch('http://10.24.111.21:5000/predict', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data }),
+        });
       }
 
+      if (!response.ok) {
+        throw new Error('Failed to get prediction from backend');
+      }
+
+      const result = await response.json();
       setPredictionResult(result);
-      setIsLoading(false);
       setShowModal(true);
-    }, 2000);
+    } catch (error) {
+      console.error('Prediction error:', error);
+      // Fallback to mock result if backend fails
+      const mockResult = {
+        status: 'error',
+        message: 'Prediction failed',
+        details: 'Unable to connect to backend. Please try again.',
+        processed: 0,
+        exoplanetsFound: 0
+      };
+      setPredictionResult(mockResult);
+      setShowModal(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div
-      className="min-h-screen py-12 px-4"
-      style={{
-        background: 'radial-gradient(at 50% 50%, #171034 0%, #0F0A20 70%, #000000 100%)'
-      }}
-    >
+    <>
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="fixed top-4 left-4 z-50 p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white hover:bg-white/20 transition-colors"
+        aria-label="Go back to landing page"
+      >
+        <ArrowLeft className="w-6 h-6" />
+      </button>
+      <div className="min-h-screen py-12 px-4">
       <div className="max-w-3xl mx-auto backdrop-blur-md bg-white/10 rounded-3xl border border-white/20 p-8 space-y-10">
         {/* Manual Input Section */}
         <section>
           <h2 className="text-3xl font-bold text-white mb-6">Manual Data Input</h2>
           <div className="grid grid-cols-1 gap-6 max-h-[400px] overflow-y-auto pr-2 dashboard-scroll">
-            {FEATURE_NAMES.map((name, index) => (
-              <FeatureInput
-                key={name}
-                name={name}
-                value={manualInputs[index]}
-                onChange={(value) => handleInputChange(index, value)}
-              />
-            ))}
+          {FEATURE_NAMES.slice(0, 14).map((name, index) => (
+            <FeatureInput
+              key={name}
+              name={name}
+              value={manualInputs[index]}
+              onChange={(value) => handleInputChange(index, value)}
+              ref={(el) => (inputRefs.current[index] = el)}
+              onEnter={() => {
+                const nextIndex = index + 1;
+                if (nextIndex < 14) inputRefs.current[nextIndex]?.focus();
+              }}
+            />
+          ))}
           </div>
         </section>
 
@@ -290,56 +349,58 @@ export default function Dashboard() {
         <ResultModal
           predictionResult={predictionResult}
           onClose={() => setShowModal(false)}
+          onDownloadCsv={downloadCsv}
         />
       )}
 
-      <style jsx>{`
-        .predict-button {
-          position: relative;
-          transition: all 0.3s ease;
-          transform-style: preserve-3d;
-        }
-
-        .predict-button:hover {
-          transform: translateY(-2px) rotateX(5deg);
-          box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
-        }
-
-        .predict-button:active {
-          transform: translateY(0) rotateX(0deg);
-        }
-
-        .dashboard-scroll::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .dashboard-scroll::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 3px;
-        }
-
-        .dashboard-scroll::-webkit-scrollbar-thumb {
-          background: rgba(255, 107, 107, 0.6);
-          border-radius: 3px;
-        }
-
-        .dashboard-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 107, 107, 0.8);
-        }
-
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
+        <style jsx>{`
+          .predict-button {
+            position: relative;
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
           }
-          to {
-            transform: translateX(0);
-          }
-        }
 
-        .slide-in-right {
-          animation: slideInRight 0.5s ease-out;
-        }
-      `}</style>
-    </div>
+          .predict-button:hover {
+            transform: translateY(-2px) rotateX(5deg);
+            box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
+          }
+
+          .predict-button:active {
+            transform: translateY(0) rotateX(0deg);
+          }
+
+          .dashboard-scroll::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          .dashboard-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+          }
+
+          .dashboard-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 107, 107, 0.6);
+            border-radius: 3px;
+          }
+
+          .dashboard-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 107, 107, 0.8);
+          }
+
+          @keyframes slideInRight {
+            from {
+              transform: translateX(100%);
+            }
+            to {
+              transform: translateX(0);
+            }
+          }
+
+          .slide-in-right {
+            animation: slideInRight 0.5s ease-out;
+          }
+        `}</style>
+      </div>
+    </>
   );
 }

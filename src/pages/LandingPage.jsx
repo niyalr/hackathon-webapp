@@ -40,25 +40,6 @@ export default function LandingPage() {
     // Root container for scroll snapping
     <div className="relative snap-y snap-mandatory overflow-x-hidden" id="landing-page-root">
       
-      {/* Background Video Container - Stays Fixed on Top (No navigation elements inside) */}
-      <div className="fixed inset-0 w-full h-full -z-10">
-        {/* VIDEO ELEMENT for seamless background */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline // Important for mobile performance
-          className="w-full h-full object-cover"
-          src="/web3.mp4"
-        >
-          {/* Fallback source for older browsers */}
-          <source src="/web3.mp4" type="video/mp4" />
-        </video>
-        
-        {/* Dark Overlay (Maintained for text legibility) */}
-        <div className="absolute inset-0 bg-black/50"></div>
-      </div>
-      
       {/* -------------------- Container 1: Hero Section Content (Cleaned) -------------------- */}
       {/* The child containers keep min-h-screen and snap-start for section definition */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center snap-start">
