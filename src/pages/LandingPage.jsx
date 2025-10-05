@@ -17,9 +17,30 @@ export default function LandingPage() {
     ),
   };
 
+  // Updated team content with four members, only names needed now
+  const teamContent = {
+    title: "Meet the Crew: Architects of the Unknown",
+    members: [
+      { name: "Hisana Saji" },
+      { name: "Niya L R" },
+      { name: "Binny Thomas" },
+      { name: "Arya S Nair" },
+    ]
+  };
+
+  // Common styles for the glassmorphic frame
+  const frameStyle = {
+    backgroundColor: 'rgba(5, 5, 20, 0.7)', 
+    backdropFilter: 'blur(10px)',
+    border: '2px solid rgba(187, 110, 251, 0.5)',
+    boxShadow: '0 0 40px rgba(187, 110, 251, 0.2), inset 0 0 20px rgba(187, 110, 251, 0.1)',
+  };
+
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
-      {/* Background Video Container - Stays Fixed on Top */}
+    // Root container for scroll snapping
+    <div className="relative snap-y snap-mandatory overflow-x-hidden" id="landing-page-root">
+      
+      {/* Background Video Container - Stays Fixed on Top (No navigation elements inside) */}
       <div className="fixed inset-0 w-full h-full -z-10">
         {/* VIDEO ELEMENT for seamless background */}
         <video
@@ -37,9 +58,10 @@ export default function LandingPage() {
         {/* Dark Overlay (Maintained for text legibility) */}
         <div className="absolute inset-0 bg-black/50"></div>
       </div>
-
-      {/* -------------------- Container 1: Hero Section Content -------------------- */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center">
+      
+      {/* -------------------- Container 1: Hero Section Content (Cleaned) -------------------- */}
+      {/* The child containers keep min-h-screen and snap-start for section definition */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center snap-start">
         <h1
           className="text-6xl md:text-7xl font-black uppercase text-white mb-8 tracking-wider"
           style={{
@@ -75,20 +97,12 @@ export default function LandingPage() {
       </div>
 
       {/* -------------------- Container 2: Unveiling Worlds (Styled like the image) -------------------- */}
-      {/* Changed items-start to items-center to vertically center the content */}
-      <div className="relative z-10 flex items-center justify-center pt-10 pb-40 px-4 text-white min-h-[50vh] md:min-h-screen">
+      <div className="relative z-10 flex items-center justify-center py-20 px-4 text-white min-h-screen snap-start">
         
         {/* Content box with glassmorphism, glowing border, and rounded corners */}
         <div
           className="relative z-20 max-w-5xl mx-auto p-8 md:p-16 rounded-[4rem] text-center"
-          style={{
-            // Glassmorphism effect: dark background with blur
-            backgroundColor: 'rgba(5, 5, 20, 0.7)', 
-            backdropFilter: 'blur(10px)',
-            // Custom glowing border effect (similar to the image)
-            border: '2px solid rgba(187, 110, 251, 0.5)',
-            boxShadow: '0 0 40px rgba(187, 110, 251, 0.2), inset 0 0 20px rgba(187, 110, 251, 0.1)',
-          }}
+          style={frameStyle}
         >
           <h2
             className="text-3xl md:text-5xl font-extrabold tracking-tighter mb-6 text-white"
@@ -100,6 +114,41 @@ export default function LandingPage() {
           <p className="text-lg md:text-xl leading-relaxed text-gray-200 text-left md:px-12">
             {content.body}
           </p>
+        </div>
+      </div>
+
+      {/* -------------------- Container 3: The Team Section -------------------- */}
+      <div className="relative z-10 flex items-center justify-center py-20 px-4 text-white min-h-screen snap-start">
+        <div
+          className="relative z-20 max-w-5xl mx-auto p-8 md:p-16 rounded-[4rem] text-center"
+          style={frameStyle}
+        >
+          <h2
+            className="text-3xl md:text-5xl font-extrabold tracking-tighter mb-12 text-white"
+            style={{ fontFamily: 'Oswald, sans-serif' }}
+          >
+            {teamContent.title}
+          </h2>
+
+          {/* Updated grid to 2x2 on desktop, 1x4 on mobile */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {teamContent.members.map((member, index) => (
+              <div
+                key={index}
+                className="p-6 rounded-2xl transition-all duration-300 hover:scale-105"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', boxShadow: '0 0 10px rgba(187, 110, 251, 0.1)' }}
+              >
+                <div className="text-4xl mb-4" role="img" aria-label="Team Member Icon">
+                  {/* Using a simple astronaut emoji */}
+                  🧑‍🚀
+                </div>
+                <h3 className="text-xl font-bold text-pink-300 mb-1">
+                  {member.name}
+                </h3>
+                {/* Removed the role field entirely */}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
